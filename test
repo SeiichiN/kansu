@@ -1,0 +1,24 @@
+expect(
+  isEmpty(empty())
+).to.eql(
+  true
+);
+
+expect(
+  isEmpty(cons(1, empty()))
+).to.eql(
+  false
+);
+
+expect (
+  head(cons(1, empty()))
+).to.eql(
+  1
+);
+
+expect(
+  head(tail(cons(1, cons(2, empty()))))
+).to.eql(
+  2
+);
+
