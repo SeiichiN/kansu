@@ -1,3 +1,11 @@
+var expect = require('expect.js');
+
+var prTest = () => {
+	console.log(
+"======================= TEST ==========================\n"
+	);
+};
+
 var succ = (n) => {
 	return n + 1;
 };
@@ -79,5 +87,76 @@ var tail = (alist) => {
 		cons: (head, tail) => {
 			return tail;
 		}
+	});
+};
+
+var counter = 0;
+while (counter < 10) {
+	counter = counter + 1;
+}
+
+// TEST
+expect(
+	counter
+).to.eql(
+	10
+);
+
+for (var counter = 0; counter < 10; counter += 1) {
+	;
+}
+
+expect(
+	counter
+).to.eql(
+	10
+);
+
+var length = (array) => {
+	var result = 0;
+	array.forEach((element) => {
+		result += 1;
+	});
+	return result;
+};
+prTest();
+expect(
+	length([1, 2, 3, 4, 5])
+).to.eql(
+	5
+);
+
+/**
+ * Hukuri keisan
+ * @param: int a -- gankin
+ *         float r -- riritsu
+ *         int n -- years
+ * @return: float Kingaku
+ */
+var compoundInterest = (a, r, n) => {
+	if (n === 0) {
+		return a;
+	} else {
+		return compoundInterest(a, r, n - 1) * (1 + r);
+	}
+};
+prTest();
+expect(
+	compoundInterest(100000, 0.02, 2)
+).to.eql(
+	104040
+);
+
+/**
+ * map by saiki
+ */
+var map = (alist, transform) => {
+	return match(alist, {
+		empty: (_) => { return empty(); },
+		cons: (head, tail) => {
+			return cons(transform(head),
+				map(tail, transform));
+		}
+
 	});
 };
