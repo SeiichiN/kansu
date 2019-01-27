@@ -341,6 +341,55 @@ describe('関数の基本', () => {
 				"This is another test."
 			);
 		});
+		it("画面出力が参照透過性を損なうこと", (next) => {
+			expect(
+				console.log("This is a test.")
+			).to.eql(
+				console.log("This is another test.")
+			);
+			next();
+		});
+	});
+	describe("副作用への対処", () => {
+		describe("tap関数", () => {
+			var succ = (n) => {
+				return n + 1;
+			};
+			var tap = (target, sideEffect) => {
+				sideEffect(target);
+				return target;
+			};
+			// fsモジュールを変数fsにバインドする
+			var fs = require('fs');
+			it ("tap関数によるconsole.logのテスト", (next) => {
+				var consoleSideEffect = (any) => {
+					console.log(any);
+				};
+				expect(
+					tap(succ(1), consoleSideEffect)
+				).to.eql(
+					tap(succ(1), consoleSideEffect)
+				);
+				next();
+			});
+			it("tap関数によるファイル入出力のテスト", (next) => {
+				fs.writeFileSync('resources/file.txt', "This is a test.");
+
+				var IOSideEffect = (_) => {
+					var content = fs.readFileSync("resources/file.txt", 'utf8');
+					fs.writeFileSync("resources/file.txt", "This is another test.");
+					return content;
+				};
+				expect(
+					tap(fs.readFileSync('resources/file.txt', 'utf8'),
+						IOSideEffect)
+				).not.to.eql(
+					tap(fs.readFileSync('resources/file.txt', 'utf8'),
+						IOSideEffect)
+				);
+				next();
+			});
+		});
 	});
 });
 
