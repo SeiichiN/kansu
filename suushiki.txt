@@ -1,0 +1,95 @@
+
+it ("代数的データ構造による数式",  () => {
+	var num = (n) => {
+		return (pattern) => {
+			return pattern.num(n);
+		};
+	};
+	var add = (exp1, exp2) => {
+		return (pattern) => {
+			return pattern.add(exp1, exp2);
+		};
+	};
+	var mul = (exp1, exp2) => {
+		return (pattern) => {
+			return pattern.mul(exp1, exp2);
+		};
+	};
+	var calculate = (exp) => {
+		return match(exp, {
+			num: (n) =>  {
+				return n;
+			},
+			add: (expL, expR) => {
+				return calculate(expL) + calculate(expR);
+			},
+			mul: (expL, expR) => {
+				return calculate(expL) * calculate(expR);
+			}
+		});
+	};
+
+==============================================================
+calculate(add(num(1), mul(num(2), num(3))))
+=>
+	return 
+	match(add(num(1), mul(num(2), num(3))) {
+		num: { // ... },
+		add: { // ... },
+		mul: { // ... }
+	});
+
+var match = (data, pattern) => {
+    return data(pattern);
+};
+
+上のmatchの定義から
+
+add(num(1), mul(num(2), num(3)))({num: ..., add: ..., mul: ...})
+^^^^^^^^^^^(data)^^^^^^^^^^^^^^  ^^^^^^^^^^(pattern)^^^^^^^^^^^
+
+add(exp1,  exp2                ) (pattern                      )
+
+上のaddの定義から
+
+pattern.add(exp1,  exp2        )
+
+pattern の定義から         
+
+add(num(1), mul(num(2), num(3))) => {
+	return calculate(num(1)) + calculate(mul(num(2), num(3)))
+}
+----------------------------------------------------------------
+calculate(num(1)) は
+	match(num(1), { pattern });
+
+matchの定義より
+	num(1)({pattern});
+
+numの定義より
+	num(1)({pattern}) => pattern.num(1)
+
+patternの定義より
+	pattern.num(1) => return 1
+
+ゆえに
+	calculate(num(1)) は、1
+----------------------------------------------------------------
+calculate(mul(num(2), num(3))) は
+	match( mul(num(2), num(3)), { pattern })
+
+matchの定義より
+	=> mul(num(2), num(3)) ({ pattern });
+
+mulの定義より
+	=> pattern.mul(num(2), num(3))
+
+patternの定義より
+	=> calculate(num(2)) * calculate(num(3))
+	=> 2                 * 3
+
+ゆえに
+	calculate(mul(num(2), num(3))) は 6
+
+
+
