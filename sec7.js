@@ -145,4 +145,50 @@ describe('カリー化で関数を返す', () => {
 		);
 		next();
 	});
+	it('カリー化されたmultipleOf関数を使う', (next) => {
+		var multipleOf = (n) => {
+			return (m) => {
+				if (m % n === 0) {
+					return true;
+				} else {
+					return false;
+				}
+			};
+		};
+		var even = multipleOf(2);
+		expect(
+			even(2)
+		).to.eql(
+			true
+		);
+		next();
+	});
+	describe('コンビネータ', () => {
+		var multipleOf = (n) => {
+			return (m) => {
+				if (m % n === 0) {
+					return true;
+				} else {
+					return false;
+				}
+			};
+		};
+		var even = multipleOf(2);
+		// notコンビネータ
+		// not:: FUN[NUM => BOOL] => FUN[NUM => BOOL]
+		var not = (predicate) => {
+			return (arg) => {
+				return ! predicate(arg);
+			};
+		};
+		it ('!演算子はコンビネータではない', (next) => {
+			var odd = not(even);
+			expect(
+				odd(3)
+			).to.eql(
+				true
+			);
+			next();
+		});
+	});
 });
