@@ -82,4 +82,13 @@ describe('カリー化で関数を返す', () => {
 		);
 		next();
 	});
+	it ('square関数', (next) => {
+		var square = exponential(2);
+		expect(
+			square(3)
+		).to.eql(
+			8
+		);
+		next();
+	});
 });
