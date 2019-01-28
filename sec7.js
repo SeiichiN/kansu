@@ -83,9 +83,63 @@ describe('カリー化で関数を返す', () => {
 		next();
 	});
 	it ('square関数', (next) => {
+		var exponential = (base) => {
+			return (index) => {
+				if (index === 0) {
+					return 1;
+				} else {
+					return base * exponential(base)(index - 1);
+				}
+			};
+		};
 		var square = exponential(2);
+		// square = (index) => {
+		//     if (index === 0) {
+		//         return 1;
+		//      } else {
+		//          return 2 * square(index - 1);
+		//      }
+		//  };
+		//  つまり、square関数は、2のn乗を計算する関数となる。
+		expect(
+			square(4)
+		).to.eql(
+			16
+		);
+		next();
+	});
+	it ('flip関数で、exponential関数の引数を逆転させる', (next) => {
+		var exponential = (base) => {
+			return (index) => {
+				if (index === 0) {
+					return 1;
+				} else {
+					return base * exponential(base)(index - 1);
+				}
+			};
+		};
+		var flip = (fun) => {
+			return (x) => {
+				return (y) => {
+					return fun(y)(x);  // 引数の順番を変える
+				};
+			};
+		};
+		var square = flip(exponential)(2);
+		var cube = flip(exponential)(3);
+		// ------- TEST ----------
+		expect(
+			square(2)
+		).to.eql(
+			4
+		);
 		expect(
 			square(3)
+		).to.eql(
+			9
+		);
+		expect(
+			cube(2)
 		).to.eql(
 			8
 		);
