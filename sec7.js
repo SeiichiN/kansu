@@ -188,7 +188,36 @@ describe('カリー化で関数を返す', () => {
 			).to.eql(
 				true
 			);
+			expect(
+				odd(2)
+			).to.eql(
+				false
+			);
 			next();
 		});
 	});
+});
+
+describe('関数を合成する', () => {
+	// 関数合成の定義
+	var compose = (f, g) => {
+		return (arg) => {
+			return f(g(arg));
+		};
+	};
+	it ('関数合成のテスト', (next) => {
+		var f = (x) => {
+			return x * x + 1;
+		};
+		var g = (x) => {
+			return x - 2;
+		};
+		expect(
+			compose(f, g)(2)
+		).to.eql(
+			f(g(2))
+		);
+		next();
+	});
+
 });
