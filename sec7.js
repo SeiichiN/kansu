@@ -586,4 +586,35 @@ describe('クロージャーを使う', () => {
         );
         next();
     });
+    it('ストリームのfilter関数', (next) => {
+        var stream = {
+            // ストリームの中から条件に合致した要素だけを抽出
+            // filter:: FUN[T => BOOL] => STREAM[T] => STREAM[T]
+            filter: (predicate) => {
+                return (aStream) => {
+                    return stream.match(aStream, {
+                        empty: (_) => {
+                            return stream.empty();
+                        },
+                        cons: (head, tailThunk) => {
+                            if (predicate(head)) {
+                                return stream.cons(head, (_) => [
+                                    return stream.filter(predicate)(tailThunk());
+                                ]);
+                            } else {
+                                return stream.filter(predicate)(tailThunk());
+                            }
+                        }
+                    });
+                };
+            },
+            // ストリームの中から条件に合致した要素を削除
+            // remove:: FUN[T => BOOL] => STREAM[T] => STREAM[T]
+            remove: (predicate) => {
+                return (aStream) => {
+                    return stream.filter(not(predicate))(aStream);
+                };
+            }
+        };
+    });
 });
