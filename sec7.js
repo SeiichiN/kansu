@@ -466,3 +466,68 @@ describe('関数を合成する', () => {
 		next();
 	});
 });
+
+describe('クロージャーを使う', () => {
+	var compose = (f, g) => {
+		return (arg) => {
+			return f(g(arg));
+		};
+	};
+	it('クロージャーとしてのcounter関数', (next) => {
+		var counter = (init) => {
+			var countingNumber = init;
+			// countingNumberの環境をもつクロージャーを返す
+			return (_) => {
+			//	countingNumber = countingNumber + 1;
+			//	return countingNumber;
+				return ++countingNumber;
+			};
+		};
+		var counterFromZero = counter(0);
+		expect(
+			counterFromZero()
+		).to.eql(
+			1
+		);
+		expect(
+			counterFromZero()
+		).to.eql(
+			2
+		);
+		next();
+	});
+	it('不変なオブジェクト型', (next) => {
+		var object = {
+			empty: (_) => {
+				return null;
+			},
+			set: (key, value) => {
+				return (obj) => {
+					return (queryKey) => {
+						if (key === queryKey) {
+							return value;
+						} else {
+							return object.get(queryKey)(obj);
+						}
+					};
+				};
+			},
+			get: (key) => {
+				return (obj) => {
+					return obj(key);
+				};
+			}
+		};
+		var robots = compose(
+			object.set("C3PO", "Star Wars"),
+			object.set("HAL9000", "2001: a space odessay")
+		)(object.empty());
+
+		expect(
+			object.get("HAL9000")(robots)
+		).to.eql(
+			"2001: a space odessay"
+		);
+		next();
+	});
+});
