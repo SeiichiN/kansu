@@ -522,12 +522,68 @@ describe('クロージャーを使う', () => {
 			object.set("C3PO", "Star Wars"),
 			object.set("HAL9000", "2001: a space odessay")
 		)(object.empty());
-
+        // robots = (queryKey) => { if() { } else { } };
+        
 		expect(
 			object.get("HAL9000")(robots)
 		).to.eql(
 			"2001: a space odessay"
 		);
+
+        expect(
+            robots("C3PO")
+        ).to.eql(
+			"Star Wars"
+        );
+        
 		next();
 	});
+    it('ストリームからジェネレータをつくる', (next) => {
+
+        /* enumFrom(1) = 1, 2, 3, 4... */
+        var enumFrom = (n) => {
+	        return stream.cons(n, (_) => {
+		        return enumFrom(n + 1);
+	        });
+        };
+
+        var generate = (aStream) => {
+            // いったんローカル変数にストリームを格納する
+            var _stream = aStream;
+            // ジェネレータ関数が返る
+            return (_) => {
+                return stream.match(_stream, {
+                    empty: () => {
+                        return null;
+                    },
+                    cons: (head, tailThunk) => {
+                        _stream = tailThunk();
+                        return head;
+                    }
+                });
+            };
+        };
+        // 無限の整数列を生成する
+        
+        var integers = enumFrom(0);
+        // 無限ストリームからジャネレータを生成する
+        var intGenerator = generate(integers);
+
+        expect(
+            intGenerator()
+        ).to.eql(
+            0
+        );
+        expect(
+            intGenerator()
+        ).to.eql(
+            1
+        );
+        expect(
+            intGenerator()
+        ).to.eql(
+            2
+        );
+        next();
+    });
 });
