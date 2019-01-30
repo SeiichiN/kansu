@@ -149,20 +149,22 @@ var stream = {
 			}
 		});
 	},
-	take: (aStream, n) => {
-		return stream.match(aStream, {
-			empty: (_) => {
-				return list.empty();
-			},
-			cons: (head, tailThunk) => {
-				if (n === 0) {
+	take: (aStream) => {
+		return (n) => {
+			return stream.match(aStream, {
+				empty: (_) => {
 					return list.empty();
-				} else {
-					return  list.cons(head,
-						stream.take(tailThunk(), (n - 1)));
+				},
+				cons: (head, tailThunk) => {
+					if (n === 0) {
+						return list.empty();
+					} else {
+						return  list.cons(head,
+							stream.take(tailThunk()) (n - 1));
+					}
 				}
-			}
-		});
+			});
+		};
 	},
 	/* enumFrom(1) = 1, 2, 3, 4... */
 	enumFrom: (n) => {
@@ -196,6 +198,20 @@ var stream = {
 		return (aStream) => {
 			return stream.filter(not(predicate))(aStream);
 		};
+	},
+	toArray: (aStream) => {
+		var toArrayHelper = (aStream, accumulator) => {
+			return stream.match(aStream, {
+				empty: (_) => {
+					return accumulator;
+				},
+				cons: (head, tail) => {
+					return toArrayHelper(tail,
+						accumulator.concat(head));
+				}
+			});
+		};
+		return toArrayHelper(aStream, []);
 	}
 };
 
@@ -545,6 +561,11 @@ describe('クロージャーを使う', () => {
 		).to.eql(
 			2
 		);
+		expect(
+			counterFromZero()
+		).not.to.eql(
+			counterFromZero()
+		);
 		next();
 	});
 	it('不変なオブジェクト型', (next) => {
@@ -572,7 +593,7 @@ describe('クロージャーを使う', () => {
 		var robots = compose(
 			object.set("C3PO", "Star Wars"),
 			object.set("HAL9000", "2001: a space odessay")
-		)(object.empty());
+		)(object.empty);
         // robots = (queryKey) => { if() { } else { } };
         
 		expect(
@@ -586,6 +607,11 @@ describe('クロージャーを使う', () => {
         ).to.eql(
 			"Star Wars"
         );
+		expect(
+			object.get("鉄腕アトム")(robots)
+		).to.eql(
+			null
+		);
         
 		next();
 	});
@@ -673,6 +699,12 @@ describe('クロージャーを使う', () => {
 			});
 		};
 		var primes = sieve(stream.enumFrom(2));
+		expect(
+			stream.toArray(stream.take(primes)(10))
+		).to.eql(
+			[2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+		);
+
 		var primeGenerator = generate(primes);
 		// -------- TEST --------------
 		expect(primeGenerator()).to.eql(
@@ -727,6 +759,68 @@ describe('クロージャーを使う', () => {
 				multipleOf(3)(5)
 			).to.eql(
 				multipleOf(3)(5)
+			);
+			next();
+		});
+		it('カウンターをクロージャーで定義する', (next) => {
+			// チャーチ数
+			var zero = (f) => {
+				return (x) => {
+					return x;
+				};
+			};
+			var one = (f) => {
+				return (x) => {
+					return f(x);
+				};
+			};
+			var two = (f) => {
+				return (x) => {
+					return f(f(x));
+				};
+			};
+			var three = (f) => {
+				return (x) => {
+					return f(f(f(x)));
+				};
+			};
+			var succ = (n) => {
+				return (f) => {
+					return (x) => {
+						return f(n(f)(x));
+					};
+				};
+			};
+			var add = (m) => {
+				return (n) => {
+					return (f) => {
+						return (x) => {
+							return m(f)(n(f)(x));
+						};
+					};
+				};
+			};
+			var counter = (init) => {
+				var _init = init;
+				return (_) => {
+					_init = _init + 1;
+					return _init;
+				};
+			};
+			expect(
+				one(counter(0))()
+			).to.eql(
+				1
+			);
+			expect(
+				two(counter(0))()
+			).to.eql(
+				2
+			);
+			expect(
+				add(one)(two)(counter(0))()
+			).to.eql(
+				3
 			);
 			next();
 		});
