@@ -4,6 +4,24 @@
 
 var expect = require('expect.js');
 
+var multipleOf = (n) => {
+	return (m) => {
+		if (m % n === 0) {
+			return true;
+		} else {
+			return false;
+		}
+	};
+};
+var even = multipleOf(2);
+// notコンビネータ
+// not:: FUN[NUM => BOOL] => FUN[NUM => BOOL]
+var not = (predicate) => {
+	return (arg) => {
+		return ! predicate(arg);
+	};
+};
+
 var list = {
 	empty: () => {
 		return (pattern) => {
@@ -145,6 +163,39 @@ var stream = {
 				}
 			}
 		});
+	},
+	/* enumFrom(1) = 1, 2, 3, 4... */
+	enumFrom: (n) => {
+		return stream.cons(n, (_) => {
+			return stream.enumFrom(n + 1);
+		});
+	},
+	// ストリームの中から条件に合致した要素だけを抽出
+	// filter:: FUN[T => BOOL] => STREAM[T] => STREAM[T]
+	filter: (predicate) => {
+		return (aStream) => {
+			return stream.match(aStream, {
+				empty: (_) => {
+					return stream.empty();
+				},
+				cons: (head, tailThunk) => {
+					if (predicate(head)) {
+						return stream.cons(head, (_) => {
+							return stream.filter(predicate)(tailThunk());
+						});
+					} else {
+						return stream.filter(predicate)(tailThunk());
+					}
+				}
+			});
+		};
+	},
+	// ストリームの中から条件に合致した要素を削除
+	// remove:: FUN[T => BOOL] => STREAM[T] => STREAM[T]
+	remove: (predicate) => {
+		return (aStream) => {
+			return stream.filter(not(predicate))(aStream);
+		};
 	}
 };
 
@@ -587,34 +638,21 @@ describe('クロージャーを使う', () => {
         next();
     });
     it('ストリームのfilter関数', (next) => {
-        var stream = {
-            // ストリームの中から条件に合致した要素だけを抽出
-            // filter:: FUN[T => BOOL] => STREAM[T] => STREAM[T]
-            filter: (predicate) => {
-                return (aStream) => {
-                    return stream.match(aStream, {
-                        empty: (_) => {
-                            return stream.empty();
-                        },
-                        cons: (head, tailThunk) => {
-                            if (predicate(head)) {
-                                return stream.cons(head, (_) => [
-                                    return stream.filter(predicate)(tailThunk());
-                                ]);
-                            } else {
-                                return stream.filter(predicate)(tailThunk());
-                            }
-                        }
-                    });
-                };
-            },
-            // ストリームの中から条件に合致した要素を削除
-            // remove:: FUN[T => BOOL] => STREAM[T] => STREAM[T]
-            remove: (predicate) => {
-                return (aStream) => {
-                    return stream.filter(not(predicate))(aStream);
-                };
-            }
+        var generate = (aStream) => {
+            // いったんローカル変数にストリームを格納する
+            var _stream = aStream;
+            // ジェネレータ関数が返る
+            return (_) => {
+                return stream.match(_stream, {
+                    empty: () => {
+                        return null;
+                    },
+                    cons: (head, tailThunk) => {
+                        _stream = tailThunk();
+                        return head;
+                    }
+                });
+            };
         };
 		// エラトステネスのふるいによる素数の生成
 		var sieve = (aStream) => {
@@ -626,7 +664,8 @@ describe('クロージャーを使う', () => {
 					return stream.cons(head, (_) => {
 						return sieve(stream.remove(
 							(item) => {
-								return multipleOf(item)(head);
+								// itemで割り切れたら true
+								return multipleOf(head)(item);
 							}
 						)(tailThunk()));
 					});
@@ -634,5 +673,62 @@ describe('クロージャーを使う', () => {
 			});
 		};
 		var primes = sieve(stream.enumFrom(2));
+		var primeGenerator = generate(primes);
+		// -------- TEST --------------
+		expect(primeGenerator()).to.eql(
+			2
+		);
+		expect(primeGenerator()).to.eql(
+			3
+		);
+		expect(primeGenerator()).to.eql(
+			5
+		);
+		expect(primeGenerator()).to.eql(
+			7
+		);
+		expect(primeGenerator()).to.eql(
+			11
+		);
+		next();
     });
+	it('ES6におけるジェネレータ', (next) => {
+		function* genCounter(){
+			yield 1;
+			yield 2;
+			return 3;
+		};
+		var counter = genCounter();
+		expect(
+			counter.next().value
+		).to.eql(
+			1
+		);
+		expect(
+			counter.next().value
+		).to.eql(
+			2
+		);
+		expect(
+			counter.next().value
+		).to.eql(
+			3	
+		);
+		next();
+	});
+	describe('クロージャの純粋性', () => {
+		it('multipleOf関数の参照透過性', (next) => {
+			expect(
+				multipleOf(2)(4)
+			).to.eql(
+				multipleOf(2)(4)
+			);
+			expect(
+				multipleOf(3)(5)
+			).to.eql(
+				multipleOf(3)(5)
+			);
+			next();
+		});
+	});
 });
