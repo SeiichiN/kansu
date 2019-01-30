@@ -784,6 +784,7 @@ describe('クロージャーを使う', () => {
 					return f(f(f(x)));
 				};
 			};
+            /*
 			var succ = (n) => {
 				return (f) => {
 					return (x) => {
@@ -791,6 +792,10 @@ describe('クロージャーを使う', () => {
 					};
 				};
 			};
+            */
+            var succ = (n) => {
+                return n + 1;
+            };
 			var add = (m) => {
 				return (n) => {
 					return (f) => {
@@ -807,22 +812,114 @@ describe('クロージャーを使う', () => {
 					return _init;
 				};
 			};
-			expect(
-				one(counter(0))()
+            var getCount = counter(0);
+
+            expect( counter(0)() ).to.eql( 1 );
+            expect( counter(0)() ).to.eql( 1 );
+            expect( counter(0)() ).to.eql( 1 );
+
+            expect( getCount() ).to.eql( 1 );
+            expect( getCount() ).to.eql( 2 );
+            expect( getCount() ).to.eql( 3 );
+
+            
+            expect( zero(succ)(0) ).to.eql( 0 );
+            expect( one(succ)(0)  ).to.eql( 1 );
+            expect( two(succ)(0)  ).to.eql( 2 );
+            expect( three(succ)(0)).to.eql( 3 );
+
+            expect(
+				one(counter(0))(0)
 			).to.eql(
 				1
 			);
 			expect(
-				two(counter(0))()
+				two(counter(0))(0)
 			).to.eql(
 				2
 			);
 			expect(
-				add(one)(two)(counter(0))()
+				add(one)(two)(counter(0))(0)
 			).to.eql(
 				3
 			);
+
 			next();
 		});
 	});
+});
+
+describe('関数を渡す', () => {
+    describe('コールバック関数で処理をモジュール化する', () => {
+        var succ = (n) => {
+            return n + 1;
+        };
+	    var compose = (f, g) => {
+		    return (arg) => {
+			    return f(g(arg));
+		    };
+	    };
+        it('直接的な呼び出しの例', (next) => {
+            var doCall = (arg) => {
+                return succ(arg);
+            };
+            expect( doCall(2) ).to.eql( 3 );
+            next();
+        });
+        it('単純なコールバックの例', (next) => {
+            var setupCallback = (callback) => {
+                // コールバック関数を実行する無名関数を返す
+                return (arg) => {
+                    return callback(arg);
+                };
+            };
+            // コールバック関数を設定する
+            var doCallback = setupCallback(succ);
+            expect( doCallback(2) ).to.eql( 3 );
+            next();
+        });
+        it('リストのmap関数の定義', (next) => {
+            // map:: FUN[T => T] => LIST[T] => LIST[T]
+            var map = (callback) => {
+                return (alist) => {
+                    return list.match(alist, {
+                        empty: (_) => {
+                            return list.empty();
+                        },
+                        cons: (head, tail) => {
+                            // コールバック関数を実行する
+                            return list.cons(callback(head),
+                                             map(callback)(tail));
+                        }
+                    });
+                };
+            };
+            // map関数の処理の対象となる数値のリスト
+            var numbers = list.cons(1,
+                                    list.cons(2,
+                                              list.cons(3,
+                                                        list.empty())));
+            // 要素を2倍するmap処理
+            var mapDouble = map( (n) => {
+                return n * 2;
+            });
+            expect(
+                compose(list.toArray, mapDouble)(numbers)
+            ).to.eql(
+                [2, 4, 6]
+            );
+
+            // 要素を2乗するmap処理
+            var mapSquare = map( (n) => {
+                return n * n;
+            });
+            expect(
+                compose(list.toArray, mapSquare)(numbers)
+            ).to.eql(
+                [1, 4, 9]
+            );
+            next();
+        });
+    });
+
 });
