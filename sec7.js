@@ -616,5 +616,23 @@ describe('クロージャーを使う', () => {
                 };
             }
         };
+		// エラトステネスのふるいによる素数の生成
+		var sieve = (aStream) => {
+			return stream.match(aStream, {
+				empty: () => {
+					return null;
+				},
+				cons: (head, tailThunk) => {
+					return stream.cons(head, (_) => {
+						return sieve(stream.remove(
+							(item) => {
+								return multipleOf(item)(head);
+							}
+						)(tailThunk()));
+					});
+				}
+			});
+		};
+		var primes = sieve(stream.enumFrom(2));
     });
 });
