@@ -129,6 +129,66 @@ var list = {
 				}
 			});
 		};
+	},
+	sumWithCallback: (alist) => {
+		return (accumulator) => {
+			return (CALLBACK) => {
+				return list.match(alist, {
+					empty: (_) => {
+						return accumulator;
+					},
+					cons: (head, tail) => {
+						return CALLBACK(head)(
+							list.sumWithCallback(tail)(accumulator)(CALLBACK)
+						);
+					}
+				});
+			};
+		};
+	},
+	length: (alist) => {
+		return (accumulator) => {
+			return list.match(alist, {
+				empty: (_) => {
+					return accumulator;
+				},
+				cons: (head, tail) => {
+					return list.length(tail)(accumulator + 1);
+				}
+			});
+		};
+	},
+	lengthWithCallback: (alist) => {
+		return (accumulator) => {
+			return (CALLBACK) => {
+				return list.match(alist, {
+					empty: (_) => {
+						return accumulator;
+					},
+					cons: (head, tail) => {
+						return CALLBACK(head)(
+							list.lengthWithCallback(tail)(accumulator)(CALLBACK)
+						);
+					}
+				});
+			};
+		};
+	},
+	foldr: (alist) => {
+		return (accumulator) => {
+			return (callback) => {
+				return list.match(alist, {
+					empty: (_) => {
+						return accumulator;
+					},
+					cons: (head, tail) => {
+						return callback(head)(
+							list.foldr(tail)(accumulator)(callback)
+						);
+					}
+				});
+			};
+		};
 	}
 };
 var stream = {
@@ -943,6 +1003,40 @@ describe('関数を渡す', () => {
 				list.sum(numbers)(0)
 			).to.eql(
 				6
+			);
+			next();
+		});
+		it('sumWithCallback関数のテスト', (next) => {
+			var callback = (n) => {
+				return (m) => {
+					return n + m;
+				};
+			};
+			expect(
+				list.sumWithCallback(numbers)(0)(callback)
+			).to.eql(
+				6
+			);
+			next();
+		});
+		it('length関数の定義', (next) => {
+			expect(
+				list.length(numbers)(0)
+			).to.eql(
+				3
+			);
+			next();
+		});
+		it('lengthWithCallback関数でリストの長さをテストする', (next) => {
+			var callback = (n) => {
+				return (m) => {
+					return 1 + m;
+				};
+			};
+			expect(
+				list.lengthWithCallback(numbers)(0)(callback)
+			).to.eql(
+				3
 			);
 			next();
 		});
