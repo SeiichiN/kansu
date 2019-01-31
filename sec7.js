@@ -117,6 +117,18 @@ var list = {
 			});
 		};
 		return toArrayHelper(alist, []);
+	},
+	sum: (alist) => {
+		return (accumulator) => {
+			return list.match(alist, {
+				empty: (_) => {
+					return accumulator;
+				},
+				cons: (head, tail) => {
+					return list.sum(tail)(accumulator + head);
+				}
+			});
+		};
 	}
 };
 var stream = {
@@ -921,5 +933,19 @@ describe('関数を渡す', () => {
             next();
         });
     });
+	describe('畳み込み関数に関数を渡す', (next) => {
+		var numbers = list.cons(1,
+			list.cons(2,
+				list.cons(3,
+					list.empty())));
+		it('sum関数の定義', (next) => {
+			expect (
+				list.sum(numbers)(0)
+			).to.eql(
+				6
+			);
+			next();
+		});
+	});
 
 });
