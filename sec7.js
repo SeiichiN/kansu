@@ -21,6 +21,11 @@ var not = (predicate) => {
 		return ! predicate(arg);
 	};
 };
+/* var cons = (value, list) => {
+ * 	return (pattern) => {
+ * 		return pattern.cons(value, list);
+ * 	};
+ * };*/
 
 var list = {
 	empty: () => {
@@ -73,7 +78,7 @@ var list = {
 					return ys;
 				},
 				cons: (head, tail) => {
-					return cons(head, append(tail, ys));
+					return list.cons(head, list.append(tail, ys));
 				}
 
 			});
@@ -189,7 +194,7 @@ var list = {
 				});
 			};
 		};
-	}
+	},
 };
 var stream = {
 	match: (data, pattern) => {
@@ -995,9 +1000,9 @@ describe('関数を渡す', () => {
     });
 	describe('畳み込み関数に関数を渡す', (next) => {
 		var numbers = list.cons(1,
-			list.cons(2,
-				list.cons(3,
-					list.empty())));
+			                    list.cons(2,
+				                          list.cons(3,
+					                                list.empty())));
 		it('sum関数の定義', (next) => {
 			expect (
 				list.sum(numbers)(0)
@@ -1040,6 +1045,84 @@ describe('関数を渡す', () => {
 			);
 			next();
 		});
+		it('foldr関数によるsum関数とlength関数の定義', (next) => {
+			var sum = (alist) => {
+				return list.foldr(alist)(0)( (item) => {
+					return (accumulator) => {
+						return accumulator + item;
+					};
+				});
+			};
+            expect(
+                sum(numbers)
+            ).to.eql(
+                6
+            );
+            var length = (alist) => {
+                return list.foldr(alist)(0)( (item) => {
+                    return (accumulator) => {
+                        return accumulator + 1;
+                    };
+                });
+            };
+            expect(
+                length(numbers)
+            ).to.eql(
+                3
+            );
+            next();
+		});
+        it('foldr関数によるreverse関数の定義', (next) => {
+            var reverse = (alist) => {
+                return list.foldr(alist)(list.empty())((item) => {
+                    return (accumulator) => {
+                        // return list.append(accumulator)(list.cons(item, list.empty()));
+                        return list.cons(item, accumulator);
+                    };
+                });
+            };
+            expect(
+                list.empty()
+            ).to.eql(
+                []
+            );
+            expect(
+                list.toArray(list.reverse(numbers))
+            ).to.eql(
+                [3, 2, 1]
+            );
+            next();
+
+        });
+        it('foldr関数によるfind関数の定義', (next) => {
+            var find = (alist) => {
+                return (predicate) => {
+                    return list.foldr(alist)(null)((item) => {
+                        return (accumulator) => {
+                            if (predicate(item) === true) {
+                                return item;
+                            } else {
+                                return accumulator;
+                            }
+                        };
+                    });
+                };
+            };
+            expect(
+                find(numbers)(even)
+            ).to.eql(
+                2
+            );
+            next();
+        });
+        it('reduceメソッドによるfromArray関数', (next) => {
+            var fromArray = (array) => {
+                return array.reduce((accumulator, item) => {
+                    return list.append(accumulator)(list.cons(item, list.empty()));
+                }, list.empty());
+            };
+            next();
+        });
 	});
 
 });
