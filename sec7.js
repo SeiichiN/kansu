@@ -782,6 +782,18 @@ describe('クロージャーを使う', () => {
 			[2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
 		);
 
+        var enumFrom = (n) => {
+	        return stream.cons(n, (_) => {
+		        return enumFrom(n + 1);
+	        });
+        };
+        var integers = enumFrom(1);
+        expect(
+            stream.toArray(stream.take(integers)(3))
+        ).to.eql(
+            [1, 2, 3]
+        );
+
 		var primeGenerator = generate(primes);
 		// -------- TEST --------------
 		expect(primeGenerator()).to.eql(

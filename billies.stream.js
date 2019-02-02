@@ -1,5 +1,7 @@
 // billies.stream.js
 
+var list = require('./billies.list.js');
+
 var stream = {
 	match: (data, pattern) => {
 		return data(pattern);
@@ -30,6 +32,7 @@ var stream = {
 			}
 		});
 	},
+
 	take: (aStream) => {
 		return (n) => {
 			return stream.match(aStream, {
@@ -40,14 +43,15 @@ var stream = {
 					if (n === 0) {
 						return list.empty();
 					} else {
-						return  list.cons(head,
-							stream.take(tailThunk()) (n - 1));
+						return  list.cons(head, 
+							stream.take(tailThunk())(n - 1));
 					}
 				}
 			});
 		};
 	},
-	/* enumFrom(1) = 1, 2, 3, 4... */
+
+    /* enumFrom(1) = 1, 2, 3, 4... */
 	enumFrom: (n) => {
 		return stream.cons(n, (_) => {
 			return stream.enumFrom(n + 1);

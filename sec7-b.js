@@ -69,7 +69,7 @@ describe('継続で未来を渡す', () => {
                 predicate,
                 continuesOnFailure,
                 continuesOnSuccess) => {
-                    return list.match(aStream, {
+                    return stream.match(aStream, {
                         /*
                            リストの最末尾に到着した場合、
                            成功継続で反復処理を抜ける
@@ -89,7 +89,7 @@ describe('継続で未来を渡す', () => {
                                    目的の要素を見つけられなかった場合
                                    失敗継続で次の反復処理を続ける
                                  */
-                                return continuesOnFailure(tailThunk,
+                                return continuesOnFailure(tailThunk(),
                                                           predicate,
                                                           continuesOnFailure,
                                                           continuesOnSuccess);
@@ -114,11 +114,23 @@ describe('継続で未来を渡す', () => {
                     escapeFromRecursion
                 );
             };
+
+            
             // find関数のテスト
             // 変数integersは、無限の整数ストリーム
             var integers = stream.enumFrom(0);
 
+            // 試しに最初の10個を配列で取り出してみる
+            var take10 = stream.toArray(stream.take(integers)(10));
+
+            expect(
+                take10
+            ).to.eql(
+                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            );
+
             // 無限の整数列のなかから100を探す
+
             expect(
                 find(
                     integers,
@@ -129,6 +141,42 @@ describe('継続で未来を渡す', () => {
             ).to.eql(
                 100
             );
+
+            next();
+        });
+        it('決定性計算機', (next) => {
+            // 式の代数的データ構造
+            var exp = {
+                match: (anExp, pattern) => {
+                    return anExp(pattern);
+                },
+                num: (n) => {
+                    return (pattern) => {
+                        return pattern.num(n);
+                    };
+                },
+                add: (exp1, exp2) => {
+                    return (pattern) => {
+                        return pattern.add(exp1, exp2);
+                    };
+                },
+                amb: (alist) => {
+                    return (pattern) => {
+                        return pattern.amb(alist);
+                    };
+                }
+            };
+            // 式の評価関数
+            var calculate = (anExp) => {
+                return exp.match(anExp, {
+                    num: (n) => {
+                        return n;
+                    },
+                    add: (exp1, exp2) => {
+                        return calculate(exp1) + calculate(exp2);
+                    }
+                });
+            };
             next();
         });
     });
