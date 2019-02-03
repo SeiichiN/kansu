@@ -97,6 +97,12 @@ var list = {
 		};
 		return toArrayHelper(alist, []);
 	},
+    // 配列からリストを作成する
+    fromArray: (array) => {
+        return array.reduce((accumulator, item) => {
+            return list.append(list.cons(item, list.empty()))(accumulator);
+        }, list.empty());
+    },
 	sum: (alist) => {
 		return (accumulator) => {
 			return list.match(alist, {

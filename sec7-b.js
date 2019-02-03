@@ -36,7 +36,7 @@ describe('継続で未来を渡す', () => {
             return any;
         };
 
-        it('継続私のsucc関数', (next) => {
+        it('継続渡しのsucc関数', (next) => {
 
             // identity関数を継続として渡すことで
             // succ(1)の結果がそのまま返る
@@ -55,9 +55,10 @@ describe('継続で未来を渡す', () => {
             // 継続渡しのsucc関数とadd関数を使って
             // add(2, succ(3))を計算する
             expect(
-                succ(3, (succResult) => {
-                    return add(2, succResult, identity)
-                })
+                succ(3,
+                     (succResult) => {
+                         return add(2, succResult, identity)
+                     })
             ).to.eql(
                 6
             );
@@ -160,11 +161,6 @@ describe('継続で未来を渡す', () => {
                         return pattern.add(exp1, exp2);
                     };
                 },
-                amb: (alist) => {
-                    return (pattern) => {
-                        return pattern.amb(alist);
-                    };
-                }
             };
             // 式の評価関数
             var calculate = (anExp) => {
@@ -177,6 +173,148 @@ describe('継続で未来を渡す', () => {
                     }
                 });
             };
+            next();
+        });
+        it('非決定性計算機', (next) => {
+            // 式の代数的データ構造
+            var exp = {
+                match: (anExp, pattern) => {
+                    return anExp(pattern);
+                },
+                num: (n) => {
+                    return (pattern) => {
+                        return pattern.num(n);
+                    };
+                },
+                add: (exp1, exp2) => {
+                    return (pattern) => {
+                        return pattern.add(exp1, exp2);
+                    };
+                },
+                amb: (alist) => {
+                    return (pattern) => {
+                        return pattern.amb(alist);
+                    };
+                }
+            };
+            // 式の評価関数
+            var calculate = (
+                anExp,
+                continuesOnSuccess,
+                continuesOnFailure) => {
+                    return exp.match(anExp, {
+                        num: (n) => {
+                            // num(n)のあとの計算の失敗に備えて
+                            // 元の失敗継続を渡す
+                            return continuesOnSuccess(n,
+                                                      continuesOnFailure);
+                        },
+                        add: (x, y) => {
+                            // 引数xを評価する
+                            return calculate(x, (resultX, continuesOnFailureX) => {
+                                // 引数yを評価する
+                                return calculate(y, (resultY, continuesOnFailureY) => {
+                                    // 引数xとyがともに成功すれば、両者の間で足し算を計算する
+                                    return continuesOnSuccess(resultX + resultY, continuesOnFailureY);
+                                }, continuesOnFailureX);  // yの計算に失敗すれば、xの失敗継続を渡す
+                            }, continuesOnFailure);  // xの計算に失敗すれば、おおもとの失敗継続を渡す
+                        }, 
+                        amb: (choices) => {
+                            var calculateAmb = (choices) => {
+                                return list.match(choices, {
+                                    /*
+                                       amb(list.empty())の場合、
+                                       すなわち選択肢がなければ、失敗継続を実行する
+                                     */
+                                    empty: () => {
+                                        return continuesOnFailure();
+                                    },
+                                    /*
+                                       amb(list.cons(head, tail))の場合、
+                                       先頭要素を計算して、後尾は失敗継続に渡す
+                                     */
+                                    cons: (head, tail) => {
+                                        return calculate(head, continuesOnSuccess, (_) => {
+                                            // 失敗継続で後尾を研鑽する
+                                            return calculateAmb(tail);
+                                        });
+                                    }
+                                });
+                            };
+                            return calculateAmb(choices);
+                        }
+                    });
+                };
+
+            var driver = (expression) => {
+                // 中断された計算を継続として保存する変数
+                var suspendedComputation = null;
+                // 成功継続
+                var continuesOnSuccess = (anyValue,
+                                          continuesOnFailure) => {
+                                              // 再開に備えて、失敗継続を保存しておく
+                                              suspendedComputation = continuesOnFailure;
+                                              return anyValue;
+                                          };
+                // 失敗継続
+                var continuesOnFailure = () => {
+                    return null;
+                };
+
+                // 内部に可変な変数suspendedComputationを持つクロージャーを渡す
+                return () => {
+                    // 中断された継続がなければ、最初から計算する
+                    if (suspendedComputation === null) {
+                        return calculate(expression,
+                                         continuesOnSuccess,
+                                         continuesOnFailure);
+                    } else {
+                        return suspendedComputation();
+                    }
+                };
+            };
+
+            // TEST
+            // amb[1, 2] + amb[3, 4] = 4, 5, 5, 6
+            var ambExp = exp.add(
+                exp.amb(list.fromArray([exp.num(1), exp.num(2)])),
+                exp.amb(list.fromArray([exp.num(3), exp.num(4)])));
+            var calculator = driver(ambExp);
+
+            expect(
+                list.cons(exp.num(1), list.cons(exp.num(2), list.empty()))
+            ).to.eql(
+                list.cons(1, list.cons(2, list.empty()))
+            );
+            
+            expect(
+                calculator()
+            ).to.eql(
+                6
+            );
+            /*
+            expect(
+                calculator()
+            ).to.eql(
+                5
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                5
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                6
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                null
+            );
+            */
+            
             next();
         });
     });
