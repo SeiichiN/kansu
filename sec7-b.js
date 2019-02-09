@@ -145,42 +145,44 @@ describe('継続で未来を渡す', () => {
 
             next();
         });
-        it('決定性計算機', (next) => {
-            // 式の代数的データ構造
-            var exp = {
-                match: (anExp, pattern) => {
-                    return anExp(pattern);
-                },
+    });
+    describe('決定性計算機', () => {
+        // 式の代数的データ構造
+        var exp = {
+            match: (anExp, pattern) => {
+                return anExp(pattern);
+            },
+            num: (n) => {
+                return (pattern) => {
+                    return pattern.num(n);
+                };
+            },
+            add: (exp1, exp2) => {
+                return (pattern) => {
+                    return pattern.add(exp1, exp2);
+                };
+            },
+        };
+        // 式の評価関数
+        /*
+           calculate(exp.num(2)) という式を考えた場合、
+           exp.match(exp.num(2), pattern式) という関数が返ってくる。
+           上式のexp.match より、exp.match(exp.num(2), pattern式)は、
+           exp.num(2)(pattern式)という関数が返される。
+           これは、上式より、pattern式.num(2)となるので、結局、
+           return 2 となる。
+         */
+        var calculate = (anExp) => {
+            return exp.match(anExp, {
                 num: (n) => {
-                    return (pattern) => {
-                        return pattern.num(n);
-                    };
+                    return n;
                 },
                 add: (exp1, exp2) => {
-                    return (pattern) => {
-                        return pattern.add(exp1, exp2);
-                    };
-                },
-            };
-            // 式の評価関数
-            /*
-               calculate(exp.num(2)) という式を考えた場合、
-               exp.match(exp.num(2), pattern式) という関数が返ってくる。
-               上式のexp.match より、exp.match(exp.num(2), pattern式)は、
-               exp.num(2)(pattern式)という関数が返される。
-               これは、上式より、pattern式.num(2)となるので、結局、
-               return 2 となる。
-            */
-            var calculate = (anExp) => {
-                return exp.match(anExp, {
-                    num: (n) => {
-                        return n;
-                    },
-                    add: (exp1, exp2) => {
-                        return calculate(exp1) + calculate(exp2);
-                    }
-                });
-            };
+                    return calculate(exp1) + calculate(exp2);
+                }
+            });
+        };
+        it('決定性計算機のテスト', (next) => {
 
             expect(
                 calculate(exp.num(3))
@@ -194,7 +196,9 @@ describe('継続で未来を渡す', () => {
             );
             next();
         });
-        it('非決定性計算機', (next) => {
+
+    });
+    describe('非決定性計算機', () => {
             // 式の代数的データ構造
             var exp = {
                 match: (anExp, pattern) => {
@@ -291,6 +295,7 @@ describe('継続で未来を渡す', () => {
                     }
                 };
             };
+        it('非決定性計算機のテスト(1)', (next) => {
 
             // TEST
             var ambExp = exp.add(exp.amb(list.cons(exp.num(1), list.cons(exp.num(2), list.empty()))),
@@ -312,7 +317,10 @@ describe('継続で未来を渡す', () => {
             ).to.eql(
                 null
             );
+            next();
+        });
 
+        it('非決定性計算機のテスト(2)', (next) => {
 
             // amb[1, 2] + amb[3, 4] = 4, 5, 5, 6
             var ambExp = exp.add(
@@ -324,8 +332,32 @@ describe('継続で未来を渡す', () => {
             expect(
                 calculator()
             ).to.eql(
+                4
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                5
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                5
+            );
+            expect(
+                calculator()
+            ).to.eql(
                 6
             );
+            expect(
+                calculator()
+            ).to.eql(
+                null
+            );
+            next();
+        });
+        
+        it('非決定性計算機のテスト(3)', (next) => {
 
             var ambExp = exp.add(
                 exp.amb(list.cons(exp.num(1), list.cons(exp.num(2), list.empty()))),
@@ -357,9 +389,50 @@ describe('継続で未来を渡す', () => {
             ).to.eql(
                 null
             );
-            
-                        
-            
+            next();
+        });
+
+        it('amb[1, 2, 3] + amb[10, 20] = amb[11, 21, 12, 22, 13, 23]', (next) => {
+            var ambExp = exp.add(
+                exp.amb(list.fromArray([exp.num(1), exp.num(2), exp.num(3)])),
+                exp.amb(list.fromArray([exp.num(10), exp.num(20)]))
+            );
+            var calculator = driver(ambExp);
+            expect(
+                calculator()
+            ).to.eql(
+                11
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                21
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                12
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                22
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                13
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                23
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                null
+            );
             next();
         });
     });

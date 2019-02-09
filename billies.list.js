@@ -52,7 +52,7 @@ var list = {
 					return ys;
 				},
 				cons: (head, tail) => {
-					return list.cons(head, list.append(tail, ys));
+					return list.cons(head, list.append(tail)(ys));
 				}
 
 			});
@@ -100,7 +100,7 @@ var list = {
     // 配列からリストを作成する
     fromArray: (array) => {
         return array.reduce((accumulator, item) => {
-            return list.append(list.cons(item, list.empty()))(accumulator);
+            return list.append(accumulator)(list.cons(item, list.empty()));
         }, list.empty());
     },
 	sum: (alist) => {
