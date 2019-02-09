@@ -163,6 +163,14 @@ describe('継続で未来を渡す', () => {
                 },
             };
             // 式の評価関数
+            /*
+               calculate(exp.num(2)) という式を考えた場合、
+               exp.match(exp.num(2), pattern式) という関数が返ってくる。
+               上式のexp.match より、exp.match(exp.num(2), pattern式)は、
+               exp.num(2)(pattern式)という関数が返される。
+               これは、上式より、pattern式.num(2)となるので、結局、
+               return 2 となる。
+            */
             var calculate = (anExp) => {
                 return exp.match(anExp, {
                     num: (n) => {
@@ -173,6 +181,17 @@ describe('継続で未来を渡す', () => {
                     }
                 });
             };
+
+            expect(
+                calculate(exp.num(3))
+            ).to.eql(
+                3
+            );
+            expect(
+                calculate(exp.add(exp.num(2), exp.num(3)))
+            ).to.eql(
+                5
+            );
             next();
         });
         it('非決定性計算機', (next) => {
@@ -206,8 +225,7 @@ describe('継続で未来を渡す', () => {
                         num: (n) => {
                             // num(n)のあとの計算の失敗に備えて
                             // 元の失敗継続を渡す
-                            return continuesOnSuccess(n,
-                                                      continuesOnFailure);
+                            return continuesOnSuccess(n, continuesOnFailure);
                         },
                         add: (x, y) => {
                             // 引数xを評価する
@@ -235,7 +253,7 @@ describe('継続で未来を渡す', () => {
                                      */
                                     cons: (head, tail) => {
                                         return calculate(head, continuesOnSuccess, (_) => {
-                                            // 失敗継続で後尾を研鑽する
+                                            // 失敗継続で後尾を計算する
                                             return calculateAmb(tail);
                                         });
                                     }
@@ -275,24 +293,50 @@ describe('継続で未来を渡す', () => {
             };
 
             // TEST
-            // amb[1, 2] + amb[3, 4] = 4, 5, 5, 6
-            var ambExp = exp.add(
-                exp.amb(list.fromArray([exp.num(1), exp.num(2)])),
-                exp.amb(list.fromArray([exp.num(3), exp.num(4)])));
+            var ambExp = exp.add(exp.amb(list.cons(exp.num(1), list.cons(exp.num(2), list.empty()))),
+                                 exp.num(3));
             var calculator = driver(ambExp);
 
             expect(
-                list.cons(exp.num(1), list.cons(exp.num(2), list.empty()))
+                calculator()
             ).to.eql(
-                list.cons(1, list.cons(2, list.empty()))
+                4
             );
-            
+            expect(
+                calculator()
+            ).to.eql(
+                5
+            );
+            expect(
+                calculator()
+            ).to.eql(
+                null
+            );
+
+
+            // amb[1, 2] + amb[3, 4] = 4, 5, 5, 6
+            var ambExp = exp.add(
+                exp.amb(list.fromArray([exp.num(1), exp.num(2)])),
+                exp.amb(list.fromArray([exp.num(3), exp.num(4)]))
+            );
+            var calculator = driver(ambExp);
+
             expect(
                 calculator()
             ).to.eql(
                 6
             );
-            /*
+
+            var ambExp = exp.add(
+                exp.amb(list.cons(exp.num(1), list.cons(exp.num(2), list.empty()))),
+                exp.amb(list.cons(exp.num(3), list.cons(exp.num(4), list.empty())))
+            );
+            var calculator = driver(ambExp);
+            expect(
+                calculator()
+            ).to.eql(
+                4
+            );
             expect(
                 calculator()
             ).to.eql(
@@ -313,7 +357,8 @@ describe('継続で未来を渡す', () => {
             ).to.eql(
                 null
             );
-            */
+            
+                        
             
             next();
         });
