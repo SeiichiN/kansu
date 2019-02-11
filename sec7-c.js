@@ -437,7 +437,6 @@ describe('IOモナドで副作用を閉じ込める', () => {
             next();
         });
 
-
         it('ファイルの内容を画面に出力するプログラム', (next) => {
             // var path = process.argv[2];
             var path = "./resources/dream.txt";
@@ -454,9 +453,5 @@ describe('IOモナドで副作用を閉じ込める', () => {
             IO.run(cat);
             next();
         });
-
-
-            
     });
-        
 });
