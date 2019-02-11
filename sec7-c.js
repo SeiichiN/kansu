@@ -1,7 +1,7 @@
 "use strict";
 
 var expect = require('expect.js');
-// var list = require('./billies.list.js');
+var list = require('./billies.list.js');
 // var stream = require('./billies.stream.js');
 
 var succ = (n) => {
@@ -197,7 +197,7 @@ describe('IOモナドで副作用を閉じ込める', () => {
         },
         // ペアの右側を取得する
         right: (tuple) => {
-            return this.match(tuple, {
+            return pair.match(tuple, {
                 cons: (left, right) => {
                     return right;
                 }
@@ -205,9 +205,9 @@ describe('IOモナドで副作用を閉じ込める', () => {
         },
         // ペアの左側を取得する
         left: (tuple) => {
-            return this.match(tuple, {
+            return pair.match(tuple, {
                 cons: (left, right) => {
-                    return right;
+                    return left;
                 }
             });
         }
@@ -222,7 +222,7 @@ describe('IOモナドで副作用を閉じ込める', () => {
             },
             // flatMap:: IO[A] => (A => IO[B]) => IO[B]
             flatMap: (instanceA) => {
-                return (actinAB) => {   // actionAB:: A -> IO[B]
+                return (actionAB) => {   // actionAB:: A -> IO[B]
                     return (world) => {
                         // 現在の外界の中でinstanceAのIOアクションを実行する
                         var newPair = instanceA(world);
@@ -238,7 +238,225 @@ describe('IOモナドで副作用を閉じ込める', () => {
                         
                     };
                 };
+            },
+            // done:: T => IO[T]   done関数
+            done: (any) => {
+                return IO.unit();
+            },
+            // run:: IO[A] => A
+            run: (instanceM) => {
+                return (world) => {
+                    // IOアクションを現在の外界に適用し、結果のみを返す
+                    return pair.left(instanceM(world));
+                };
+            },
+            // readFile:: STRING => IO[STRING]
+            // readFile関数は、pathで指定されたファイルを読み込むIOアクション
+            readFile: (path) => {
+                return (world) => {
+                    var fs = require('fs');
+                    var content = fs.readFileSync(path, 'utf8');
+                    return IO.unit(content)(world);  // 外界を渡してIOアクションを返す
+                };
+            },
+            // println:: STRING => IO[]
+            // println関数は、messageで指定された文字列をコンソール画面に
+            // 出力するIOアクション
+            println: (message) => {
+                return (world) => {
+                    console.log(message);
+                    return IO.unit(null)(world);
+                };
             }
         };
+
+        it ('run関数の利用法', (next) => {
+            // 初期の外界に null をバインドする
+            var initialWorld = null;
+            expect(
+                IO.run(IO.println("吾輩は猫である"))(initialWorld)
+            ).to.eql(
+                null
+            );
+            next();
+        });
     });
+
+    describe('外界を明示しないIOモナドの定義', () => {
+        var IO = {
+            // unit:: T => IO[T]
+            unit: (any) => {
+                return (_) => {  // 外界を指定しない
+                    return any;  // 値だけを返す
+                };
+            },
+            // flatMap:: IO[A] => FUN[A => IO[B]] => IO[B]
+            flatMap: (instanceA) => {
+                return (actionAB) => {  // actionAB:: A -> IO[B]
+                    return (_) => {
+                        // instanceAのIOアクションを実行し、
+                        // 続いて actionABを実行する
+                        return IO.run(actionAB(IO.run(instanceA)));
+
+                    };
+                    
+                };
+            },
+            // done:: T => IO[T]
+            done: (any) => {
+                return IO.unit();
+            },
+            // run:: IO[A] => A
+            run: (instance) => {
+                if (instance !== null) {
+                    return instance();
+                } else {
+                    return instance;
+                }
+            },
+            // readFile:: STRING => IO[STRING]
+            readFile: (path) => {
+                return (_) => {
+                    var fs = require('fs');
+                    var content = fs.readFileSync(path, 'utf8');
+                    return IO.unit(content)();
+                };
+            },
+            // println:: STRING => IO[]
+            println: (message) => {
+                return (_) => {
+                    console.log(message);
+                    return IO.unit(null)();
+                };
+            },
+            writeFile: (path) => {
+                return (content) => {
+                    return (_) => {
+                        var fs = require('fs');
+                        fs.writeFileSync(path, content);
+                        return IO.unit(null)();
+                    };
+                };
+            },
+            // IO.putChar:: CHAR => IO[]
+            // putChar関数は、1文字を出力する
+            putChar: (character) => {
+                // 1文字だけ画面に出力する
+                process.stdout.write(character);
+                return IO.unit(null)();
+            },
+            // seq関数は、2つのIOアクションを続けて実行する
+            // これは本に書かれていたseq関数
+            seq: (actionA) => {
+                return (actionB) => {
+                    return IO.unit(IO.run(IO.flatMap(actionA)((_) => {
+                        return IO.flatMap(actionB)((_) => {
+                            return IO.done();
+                        });
+                    })));
+                };
+            },
+            
+            /*
+               // これは、著者のgithubにあったseq関数
+               // http://akimichi.github.io/functionaljs/chap07.spec.html#io-monad
+               // どちらでも動く
+            seq: (instanceA) => {
+                return (instanceB) => {
+                    return IO.flatMap(instanceA)((a) => {
+                        return instanceB;
+                    });
+                };
+            },
+            */
+            
+            // IO.putStr:: LIST[CHAR] => IO[]
+            // putStr関数は、文字のリストを連続して出力する
+            putStr: (alist) => {
+                return list.match(alist, {
+                    empty: () => {
+                        return IO.done();
+                    },
+                    cons: (head, tail) => {
+                        return IO.seq(IO.putChar(head))(IO.putStr(tail));
+                    }
+                });
+            },
+            // IO.putStrLn:: LIST[CHAR] => IO[]
+            // putStrLn関数は、文字列を出力し、最後に改行を出力する
+            putStrLn: (alist) => {
+                return IO.seq(IO.putStr(alist))(IO.putChar("\n"));
+            }
+        };
+
+        var string = {
+            // 先頭文字を取得する
+            head: (str) => {
+                return str[0];
+            },
+            // 後尾文字列を取得する
+            tail: (str) => {
+                return str.substring(1);
+            },
+            // 空の文字列かどうかを判定する
+            isEmpty: (str) => {
+                return str.length === 0;
+            },
+            // 文字列を文字のリストに変換する
+            toList: (str) => {
+                if (string.isEmpty(str)) {
+                    return list.empty();
+                } else {
+                    return list.cons(string.head(str),
+                                     string.toList(string.tail(str)));
+                }
+            }
+        };
+
+        it('run関数の利用法', (next) => {
+            expect(
+                // 外界を指定する必要はありません
+                IO.run(IO.println("名前はまだない"))
+            ).to.eql(
+                null
+            );
+            next();
+        });
+
+        it ('stringのテスト', (next) => {
+            expect(
+                string.head("abc")
+            ).to.eql(
+                'a'
+            );
+            expect(
+                string.tail("abc")
+            ).to.eql(
+                'bc'
+            );
+            next();
+        });
+
+
+        it('ファイルの内容を画面に出力するプログラム', (next) => {
+            // var path = process.argv[2];
+            var path = "./resources/dream.txt";
+            
+            // ファイルをcontentに読み込む
+            var cat = IO.flatMap(IO.readFile(path))((content) => {
+                // 文字列を文字のリストに変換しておく
+                var string_as_list = string.toList(content);
+                // putStrLnでコンソール画面に出力する
+                return IO.flatMap(IO.putStrLn(string_as_list))((_) => {
+                    return IO.done(_);
+                });
+            });
+            IO.run(cat);
+            next();
+        });
+
+
+            
+    });
+        
 });
